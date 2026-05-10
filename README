@@ -1,0 +1,29 @@
+This Python web application is a chatbot that answers questions about Minnesota state laws.
+It uses a finetuned RAG architecture with a pgvector-enabled PostgreSQL database, as well as user authorization. The frontend uses Streamlit to handle the conversation.
+The chatbot retains conversation history / state to provide better answers and improve the user experience.
+
+Below is the general flow of the application:
+
+0. User Authorization
+    a. Using Amazon Cognito and the streamlit_cognito_auth Python library, users must register to create an account
+    b. After signing in, users can query the chatbot and their conversation history is retained
+
+
+1. Data Ingestion Pipeline
+    a. Pull MN Statute data from the MN Revisor's office and store the data in S3
+    b. Use a Python Lambda script to read the data and break them into overlapping chunks. 
+    c. Each chunk is sent to an Amazon Titan Embeddings LLM to vectorize it
+    d. The vectorized embeddings are stored in an Amazon RDS Postgres database with their original text
+
+2. Finetuning The Model
+    a. Using a small dataset of question and answer pairs from MN statutes, we run finetuning on Amazon Nova Micro
+    b. The finetuned Amazon Nova Micro model is what we use to run inference for conversations
+
+3. Retrieval And Inference
+    a. User enters prompt
+    b. Prompt optimization (fix typos, expand on abbreviations, rephrase for better vector searching)
+    c. Lambda sends the prompt to the Titan Embeddings API to get a search vector
+    d. The search vector is queried against the Postgres vector database using <=> to return the 3 most relevant chunks of MN law
+    e. The conversation history is fetched from another database table
+    f. Lambda sends the conversation history, the 3 most relevant chunks, and the prompt to the finetuned Nova model for a response
+    g. The result is stored in conversation history and is displayed to the user

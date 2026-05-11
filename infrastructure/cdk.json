@@ -1,0 +1,6 @@
+{
+  "app": "python cdk-iac.py",
+  "context": {
+    "@aws-cdk/core:stackRelativeExports": true
+  }
+}
